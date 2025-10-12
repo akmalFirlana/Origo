@@ -34,6 +34,7 @@ export async function createSupabaseServerClient() {
       throw error;
     }
   }
+  const token = await getToken({ template: "supabase" });
 
   const globalHeaders: Record<string, string> = {};
   if (token) {
