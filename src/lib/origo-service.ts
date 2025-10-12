@@ -345,7 +345,7 @@ export async function getTags(userId: string) {
   return data as Tag[];
 }
 
-export async function createTag(tagData: Omit<Tag, 'id' | 'user_id' | 'created_at'>, userId: string) {
+export async function createTag(tagData: Omit<Tag, 'id' | 'user_id' | 'created_at' | 'updated_at'>, userId: string) {
   const supabase = await createSupabaseServerClient();
   
   const { data, error } = await supabase

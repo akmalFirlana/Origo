@@ -78,7 +78,8 @@ CREATE TABLE IF NOT EXISTS public.tags (
   user_id TEXT NOT NULL, -- Clerk user ID
   name TEXT NOT NULL,
   color TEXT, -- Color for UI display
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Enable Row Level Security on all tables
@@ -234,31 +235,49 @@ CREATE TRIGGER update_tags_updated_at
 
 -- Create a function to automatically log activities
 CREATE OR REPLACE FUNCTION log_activity()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
+DECLARE
+  action_value TEXT;
+  user_id_value TEXT;
+  entity_id_value UUID;
+  metadata_value JSONB;
 BEGIN
-  -- Insert an activity log record
+  IF TG_OP = 'DELETE' THEN
+    action_value := 'delete';
+    user_id_value := OLD.user_id;
+    entity_id_value := OLD.id;
+    metadata_value := jsonb_build_object('old', to_jsonb(OLD));
+  ELSIF TG_OP = 'INSERT' THEN
+    action_value := 'create';
+    user_id_value := NEW.user_id;
+    entity_id_value := NEW.id;
+    metadata_value := jsonb_build_object('new', to_jsonb(NEW));
+  ELSE
+    action_value := 'update';
+    user_id_value := NEW.user_id;
+    entity_id_value := NEW.id;
+    metadata_value := jsonb_build_object(
+      'old', to_jsonb(OLD),
+      'new', to_jsonb(NEW)
+    );
+  END IF;
+
   INSERT INTO public.activity_logs (user_id, entity_type, entity_id, action, metadata)
   VALUES (
-    CASE
-      WHEN TG_TABLE_NAME = 'tasks' THEN NEW.user_id
-      WHEN TG_TABLE_NAME = 'habits' THEN NEW.user_id
-      WHEN TG_TABLE_NAME = 'events' THEN NEW.user_id
-    END,
+    user_id_value,
     TG_TABLE_NAME,
-    CASE
-      WHEN TG_TABLE_NAME = 'tasks' THEN NEW.id
-      WHEN TG_TABLE_NAME = 'habits' THEN NEW.id
-      WHEN TG_TABLE_NAME = 'events' THEN NEW.id
-    END,
-    TG_OP,
-    json_build_object(
-      'old', CASE WHEN TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN OLD END,
-      'new', CASE WHEN TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN NEW END
-    )
+    entity_id_value,
+    action_value,
+    metadata_value
   );
-  RETURN NEW;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create triggers for automatic activity logging
 CREATE TRIGGER log_task_activity
