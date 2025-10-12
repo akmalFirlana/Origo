@@ -16,9 +16,9 @@ const isProtectedRoute = createRouteMatcher([
   '/api/tags(.*)',
 ]);
 
-export default clerkMiddleware((req) => {
+export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
-    req.auth().protect();
+    await auth.protect();
   }
 });
 
