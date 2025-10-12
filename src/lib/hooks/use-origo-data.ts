@@ -65,7 +65,7 @@ export const useOrigoData = () => {
       setLoading(true);
       setError(null);
       
-      // Load all data concurrently
+      // Load all data concurrently with individual error handling
       const [
         tasksData,
         habitsData,
@@ -75,13 +75,34 @@ export const useOrigoData = () => {
         tagsData,
         profileData
       ] = await Promise.all([
-        apiGetTasks(),
-        apiGetHabits(),
-        apiGetEvents(),
-        apiGetActivityLogs(),
-        apiGetHabitLogs(),
-        apiGetTags(),
-        apiGetUserProfile()
+        apiGetTasks().catch(err => {
+          console.error('Error loading tasks:', err);
+          return [];
+        }),
+        apiGetHabits().catch(err => {
+          console.error('Error loading habits:', err);
+          return [];
+        }),
+        apiGetEvents().catch(err => {
+          console.error('Error loading events:', err);
+          return [];
+        }),
+        apiGetActivityLogs().catch(err => {
+          console.error('Error loading activity logs:', err);
+          return [];
+        }),
+        apiGetHabitLogs().catch(err => {
+          console.error('Error loading habit logs:', err);
+          return [];
+        }),
+        apiGetTags().catch(err => {
+          console.error('Error loading tags:', err);
+          return [];
+        }),
+        apiGetUserProfile().catch(err => {
+          console.error('Error loading user profile:', err);
+          return null;
+        })
       ]);
       
       setTasks(tasksData);
@@ -93,6 +114,7 @@ export const useOrigoData = () => {
       setProfile(profileData);
     } catch (err) {
       console.error('Error loading data:', err);
+      // Even if there's an overall error, try to set what we could load
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);

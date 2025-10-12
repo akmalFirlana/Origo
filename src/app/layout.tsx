@@ -23,6 +23,12 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
+        <head>
+          {/* PWA Meta Tags */}
+          <link rel="manifest" href="/manifest.json" />
+          <meta name="theme-color" content="#3B82F6" />
+          <link rel="apple-touch-icon" href="/origo-icon-192.png" />
+        </head>
         <body
           className={`${inter.variable} antialiased`}
         >

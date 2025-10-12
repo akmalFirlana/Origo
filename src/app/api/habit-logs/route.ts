@@ -17,10 +17,11 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     let query = supabase
       .from('habit_logs')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .order('date', { ascending: false });
     
     if (from) {
@@ -35,13 +36,13 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('Error fetching habit logs:', error);
-      return Response.json({ error: 'Failed to fetch habit logs' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch habit logs: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as HabitLog[]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/habit-logs:', error);
-    return Response.json({ error: 'Failed to fetch habit logs' }, { status: 500 });
+    return Response.json({ error: `Failed to fetch habit logs: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     const { data, error } = await supabase
       .from('habit_logs')
       .insert([{
@@ -65,19 +67,19 @@ export async function POST(request: NextRequest) {
         date,
         status,
         note,
-        user_id: userId
+        user_id: userId.toString()
       }])
       .select()
       .single();
     
     if (error) {
       console.error('Error creating habit log:', error);
-      return Response.json({ error: 'Failed to create habit log' }, { status: 500 });
+      return Response.json({ error: `Failed to create habit log: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as HabitLog, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/habit-logs:', error);
-    return Response.json({ error: 'Failed to create habit log' }, { status: 500 });
+    return Response.json({ error: `Failed to create habit log: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }

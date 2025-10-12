@@ -13,21 +13,22 @@ export async function GET() {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .single();
     
     if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
       console.error('Error fetching user profile:', error);
-      return Response.json({ error: 'Failed to fetch user profile' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch user profile: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as UserProfile || null);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/profiles:', error);
-    return Response.json({ error: 'Failed to fetch user profile' }, { status: 500 });
+    return Response.json({ error: `Failed to fetch user profile: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
@@ -44,35 +45,36 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     // Try to update first
     const { error: updateError } = await supabase
       .from('profiles')
       .upsert([{
-        user_id: userId,
+        user_id: userId.toString(),
         theme_preference,
         notification_preferences,
       }]);
     
     if (updateError) {
       console.error('Error creating or updating profile:', updateError);
-      return Response.json({ error: 'Failed to create or update profile' }, { status: 500 });
+      return Response.json({ error: `Failed to create or update profile: ${updateError.message}` }, { status: 500 });
     }
     
     // Fetch the updated profile
     const { data, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .single();
     
     if (fetchError) {
       console.error('Error fetching updated profile:', fetchError);
-      return Response.json({ error: 'Failed to fetch updated profile' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch updated profile: ${fetchError.message}` }, { status: 500 });
     }
     
     return Response.json(data as UserProfile, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/profiles:', error);
-    return Response.json({ error: 'Failed to create or update user profile' }, { status: 500 });
+    return Response.json({ error: `Failed to create or update user profile: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }

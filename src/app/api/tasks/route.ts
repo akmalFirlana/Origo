@@ -13,21 +13,22 @@ export async function GET() {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .order('created_at', { ascending: false });
     
     if (error) {
       console.error('Error fetching tasks:', error);
-      return Response.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch tasks: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as Task[]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/tasks:', error);
-    return Response.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+    return Response.json({ error: `Failed to fetch tasks: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     const { data, error } = await supabase
       .from('tasks')
       .insert([{
@@ -53,19 +55,19 @@ export async function POST(request: NextRequest) {
         due_date,
         tags,
         status,
-        user_id: userId
+        user_id: userId.toString()
       }])
       .select()
       .single();
     
     if (error) {
       console.error('Error creating task:', error);
-      return Response.json({ error: 'Failed to create task' }, { status: 500 });
+      return Response.json({ error: `Failed to create task: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as Task, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/tasks:', error);
-    return Response.json({ error: 'Failed to create task' }, { status: 500 });
+    return Response.json({ error: `Failed to create task: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }

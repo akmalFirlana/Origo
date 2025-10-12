@@ -13,28 +13,26 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import { Event } from "@/lib/types";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, isSameMonth, isSameDay, addDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, isSameMonth, isSameDay, addDays, setHours, setMinutes, parseISO } from "date-fns";
 import ProtectedLayout from "../protected-layout";
-
-// Mock data for events
-const mockEvents: Event[] = [
-  { id: '1', user_id: 'user1', title: 'Team meeting', description: 'Weekly sync', location: 'Conference Room A', start_at: '2025-10-12T10:00:00Z', end_at: '2025-10-12T11:00:00Z', reminders: [15], created_at: '2025-10-10T08:00:00Z', updated_at: '2025-10-10T08:00:00Z' },
-  { id: '2', user_id: 'user1', title: 'Doctor appointment', description: 'Annual checkup', location: 'City Hospital', start_at: '2025-10-13T14:00:00Z', end_at: '2025-10-13T15:00:00Z', reminders: [60], created_at: '2025-10-10T09:00:00Z', updated_at: '2025-10-10T09:00:00Z' },
-  { id: '3', user_id: 'user1', title: 'Project deadline', description: 'Submit final project', location: 'Office', start_at: '2025-10-15T17:00:00Z', end_at: '2025-10-15T17:00:00Z', reminders: [1440, 60], created_at: '2025-10-10T10:00:00Z', updated_at: '2025-10-10T10:00:00Z' },
-  { id: '4', user_id: 'user1', title: 'Lunch with Alex', description: 'Discuss new project', location: 'Downtown Cafe', start_at: '2025-10-16T12:30:00Z', end_at: '2025-10-16T13:30:00Z', reminders: [30], created_at: '2025-10-10T11:00:00Z', updated_at: '2025-10-10T11:00:00Z' },
-];
+import { useOrigoData } from "@/lib/hooks/use-origo-data";
+import NotificationProvider from "@/components/notification-provider";
 
 export default function CalendarPage() {
   return (
     <ProtectedLayout>
+      <NotificationProvider />
       <ProtectedCalendarContent />
     </ProtectedLayout>
   );
 }
 
 function ProtectedCalendarContent() {
+  const { events, loading, error, addEvent, updateEvent, removeEvent } = useOrigoData();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events] = useState<Event[]>(mockEvents);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [draggedEvent, setDraggedEvent] = useState<Event | null>(null);
   
   // Get the current month's events
   const currentMonthEvents = events.filter(event => 
@@ -45,6 +43,44 @@ function ProtectedCalendarContent() {
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
+
+  // Handle drag start for events
+  const handleDragStart = (event: Event) => {
+    setDraggedEvent(event);
+  };
+
+  // Handle drag over for calendar cells
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  // Handle drop on calendar cell to move event
+  const handleDrop = (day: Date) => {
+    if (draggedEvent) {
+      // Calculate new start and end times based on day
+      const oldStart = new Date(draggedEvent.start_at);
+      const oldEnd = new Date(draggedEvent.end_at);
+      const dayStart = new Date(day);
+      
+      // Calculate the time difference to preserve original time
+      const newStart = setHours(setMinutes(dayStart, oldStart.getMinutes()), oldStart.getHours());
+      const newEnd = new Date(newStart.getTime() + (oldEnd.getTime() - oldStart.getTime()));
+      
+      // Update the event with new date
+      updateEvent(draggedEvent.id, {
+        start_at: newStart.toISOString(),
+        end_at: newEnd.toISOString()
+      });
+      
+      setDraggedEvent(null);
+    }
+  };
+
+  // Handle click on a calendar day to create new event
+  const handleDayClick = (day: Date) => {
+    setSelectedDate(day);
+    setShowEventModal(true);
+  };
 
   // Render calendar days
   const renderHeader = () => {
@@ -67,7 +103,7 @@ function ProtectedCalendarContent() {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          <Button>
+          <Button onClick={() => setShowEventModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Event
           </Button>
@@ -119,6 +155,9 @@ function ProtectedCalendarContent() {
             className={`min-h-24 p-2 border border-transparent border-t-gray-200 border-l-gray-200 ${
               !isSameMonth(cloneDay, monthStart) ? "bg-gray-100 text-gray-400" : ""
             } ${isSameDay(cloneDay, new Date()) ? "bg-blue-50" : ""}`}
+            onClick={() => handleDayClick(cloneDay)}
+            onDragOver={handleDragOver}
+            onDrop={() => handleDrop(cloneDay)}
           >
             <div className="flex justify-between">
               <span className={`text-sm ${isSameDay(cloneDay, new Date()) ? "font-bold text-blue-600" : ""}`}>
@@ -130,6 +169,8 @@ function ProtectedCalendarContent() {
                 <div 
                   key={event.id} 
                   className="text-xs p-1 bg-blue-100 rounded truncate hover:bg-blue-200 cursor-pointer"
+                  draggable
+                  onDragStart={() => handleDragStart(event)}
                 >
                   {format(new Date(event.start_at), "HH:mm")} {event.title}
                 </div>

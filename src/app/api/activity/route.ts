@@ -18,10 +18,11 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     let query = supabase
       .from('activity_logs')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .order('created_at', { ascending: false });
     
     if (from) {
@@ -40,12 +41,12 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('Error fetching activity logs:', error);
-      return Response.json({ error: 'Failed to fetch activity logs' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch activity logs: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as ActivityLog[]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/activity:', error);
-    return Response.json({ error: 'Failed to fetch activity logs' }, { status: 500 });
+    return Response.json({ error: `Failed to fetch activity logs: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }

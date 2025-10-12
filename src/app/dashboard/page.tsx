@@ -10,17 +10,22 @@ import {
   CheckSquare,
   Clock,
   Flame,
-  Plus
+  Plus,
+  Bell
 } from "lucide-react";
 import { getToday } from "@/lib/utils";
 import { Task, Habit, Event } from "@/lib/types";
 import { useUser } from "@clerk/nextjs";
 import ProtectedLayout from "../protected-layout";
 import { useOrigoData } from "@/lib/hooks/use-origo-data";
+import { useEffect, useState } from "react";
+import { checkUpcomingNotifications } from "@/lib/notifications";
+import NotificationProvider from "@/components/notification-provider";
 
 export default function DashboardPage() {
   return (
     <ProtectedLayout>
+      <NotificationProvider />
       <ProtectedDashboardContent />
     </ProtectedLayout>
   );
@@ -37,6 +42,8 @@ function ProtectedDashboardContent() {
     loadData 
   } = useOrigoData();
   
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+
   // Calculate today's stats
   const today = getToday();
   const todayTasks = tasks.filter(task => task.due_date === today);
@@ -45,6 +52,30 @@ function ProtectedDashboardContent() {
   // Calculate habit completion stats (this would be more complex in reality)
   const habitCompletionRate = Math.min(100, Math.round((habits.length > 0 ? 67 : 0))); // Placeholder calculation
 
+  // Check for upcoming notifications
+  useEffect(() => {
+    // Get notification permission status
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      
+      // Check for upcoming tasks and events periodically
+      const interval = setInterval(() => {
+        if (tasks.length > 0 || events.length > 0) {
+          checkUpcomingNotifications(tasks, events);
+        }
+      }, 60000); // Check every minute
+      
+      return () => clearInterval(interval);
+    }
+  }, [tasks, events]);
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -52,10 +83,18 @@ function ProtectedDashboardContent() {
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {user?.firstName || 'User'}. Here&rsquo;s what&rsquo;s happening today.</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Quick Add
-        </Button>
+        <div className="flex gap-2">
+          {notificationPermission !== 'granted' && (
+            <Button variant="outline" onClick={requestNotificationPermission}>
+              <Bell className="w-4 h-4 mr-2" />
+              Enable Notifications
+            </Button>
+          )}
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Quick Add
+          </Button>
+        </div>
       </div>
 
       {/* Today's Summary Cards */}

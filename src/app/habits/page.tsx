@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,10 +19,14 @@ import { Habit, HabitLog, HabitFrequency, HabitLogStatus } from "@/lib/types";
 import { getToday } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
 import { useOrigoData } from "@/lib/hooks/use-origo-data";
+import { HabitCompletionChart, HabitStreakChart } from "@/components/habits/habit-charts";
+import { format, eachDayOfInterval, subWeeks, isSameDay } from "date-fns";
+import NotificationProvider from "@/components/notification-provider";
 
 export default function HabitsPage() {
   return (
     <ProtectedLayout>
+      <NotificationProvider />
       <ProtectedHabitsContent />
     </ProtectedLayout>
   );
@@ -44,6 +46,36 @@ function ProtectedHabitsContent() {
       log: log || null
     };
   });
+
+  // Calculate habit statistics for charts
+  const lastWeek = eachDayOfInterval({
+    start: subWeeks(new Date(), 1),
+    end: new Date()
+  }).map(date => format(date, 'yyyy-MM-dd'));
+  
+  const habitCompletionData = habits.map(habit => {
+    // Count completed logs in the last week for this habit
+    const completedCount = lastWeek.reduce((count, date) => {
+      const log = habitLogs.find(
+        log => log.habit_id === habit.id && 
+               log.date === date && 
+               log.status === 'done'
+      );
+      return count + (log ? 1 : 0);
+    }, 0);
+    
+    return {
+      name: habit.name,
+      completed: completedCount,
+      target: habit.schedule?.perWeekTarget || 7, // Default to 7 for daily habits
+      streak: calculateStreak(habit, habitLogs)
+    };
+  });
+  
+  const habitStreakData = habits.map(habit => ({
+    name: habit.name,
+    value: calculateStreak(habit, habitLogs)
+  }));
 
   // Filter habits based on search and filters
   const filteredHabits = habits.filter(habit => {
@@ -132,7 +164,30 @@ function ProtectedHabitsContent() {
         </CardContent>
       </Card>
 
-      {/* Habit Progress */}
+      {/* Habit Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Habit Completion (Last 7 Days)</CardTitle>
+            <CardDescription>Track your habit completion over the past week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <HabitCompletionChart data={habitCompletionData} />
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Habit Streaks</CardTitle>
+            <CardDescription>Current streak days for each habit</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <HabitStreakChart data={habitStreakData} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Habit Progress Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
@@ -142,8 +197,12 @@ function ProtectedHabitsContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">5 days</div>
-            <p className="text-sm text-muted-foreground">Your current streak</p>
+            <div className="text-3xl font-bold">
+              {habits.length > 0 
+                ? Math.max(...habits.map(habit => calculateStreak(habit, habitLogs))) 
+                : 0} days
+            </div>
+            <p className="text-sm text-muted-foreground">Your best current streak</p>
           </CardContent>
         </Card>
         
@@ -155,8 +214,13 @@ function ProtectedHabitsContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">78%</div>
-            <p className="text-sm text-muted-foreground">This month</p>
+            <div className="text-3xl font-bold">
+              {habits.length > 0 
+                ? Math.round((habitLogs.filter(log => log.status === 'done').length / 
+                     Math.max(habitLogs.length, 1)) * 100) + '%' 
+                : '0%'}
+            </div>
+            <p className="text-sm text-muted-foreground">Overall completion rate</p>
           </CardContent>
         </Card>
         
@@ -208,6 +272,59 @@ function ProtectedHabitsContent() {
       </Card>
     </div>
   );
+}
+
+// Helper function to calculate streak
+function calculateStreak(habit: Habit, habitLogs: HabitLog[]): number {
+  let streak = 0;
+  const today = new Date();
+  
+  // Get logs for this specific habit
+  const habitLogsForHabit = habitLogs
+    .filter(log => log.habit_id === habit.id && log.status === 'done')
+    .map(log => new Date(log.date))
+    .sort((a, b) => b.getTime() - a.getTime()); // Sort descending by date
+
+  // If no logs, return 0
+  if (habitLogsForHabit.length === 0) return 0;
+
+  // If the last completion wasn't today and the habit is daily, streak is broken
+  const lastCompleted = habitLogsForHabit[0];
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Check if the habit was completed yesterday or today
+  if (!isSameDay(lastCompleted, today) && !isSameDay(lastCompleted, yesterday)) {
+    // Streak is broken, find the last consecutive sequence
+    let expectedDate = new Date(today);
+    expectedDate.setDate(expectedDate.getDate() - 1);
+    
+    for (const logDate of habitLogsForHabit) {
+      if (isSameDay(logDate, expectedDate)) {
+        streak++;
+        expectedDate.setDate(expectedDate.getDate() - 1);
+      } else {
+        break; // Streak is broken
+      }
+    }
+  } else {
+    // Streak may still be active, continue counting
+    let expectedDate = new Date(today);
+    if (!isSameDay(lastCompleted, today)) {
+      expectedDate.setDate(expectedDate.getDate() - 1);
+    }
+    
+    for (const logDate of habitLogsForHabit) {
+      if (isSameDay(logDate, expectedDate)) {
+        streak++;
+        expectedDate.setDate(expectedDate.getDate() - 1);
+      } else {
+        break; // Streak is broken
+      }
+    }
+  }
+
+  return streak;
 }
 
 // Habit Card Component

@@ -17,10 +17,11 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     let query = supabase
       .from('events')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', userId.toString())
       .order('start_at', { ascending: true });
     
     if (from) {
@@ -35,13 +36,13 @@ export async function GET(request: NextRequest) {
     
     if (error) {
       console.error('Error fetching events:', error);
-      return Response.json({ error: 'Failed to fetch events' }, { status: 500 });
+      return Response.json({ error: `Failed to fetch events: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as Event[]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/events:', error);
-    return Response.json({ error: 'Failed to fetch events' }, { status: 500 });
+    return Response.json({ error: `Failed to fetch events: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient();
     
+    // Convert userId to string to match the database schema
     const { data, error } = await supabase
       .from('events')
       .insert([{
@@ -67,19 +69,19 @@ export async function POST(request: NextRequest) {
         start_at,
         end_at,
         reminders,
-        user_id: userId
+        user_id: userId.toString()
       }])
       .select()
       .single();
     
     if (error) {
       console.error('Error creating event:', error);
-      return Response.json({ error: 'Failed to create event' }, { status: 500 });
+      return Response.json({ error: `Failed to create event: ${error.message}` }, { status: 500 });
     }
     
     return Response.json(data as Event, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/events:', error);
-    return Response.json({ error: 'Failed to create event' }, { status: 500 });
+    return Response.json({ error: `Failed to create event: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }

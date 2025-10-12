@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +11,6 @@ import {
   Plus,
   Search,
   Clock,
-  Flame,
-  Zap,
-  Timer,
-  Leaf,
   Edit,
   Trash2
 } from "lucide-react";
@@ -20,10 +18,13 @@ import { Task, Priority } from "@/lib/types";
 import { getPriorityColor, getPriorityLabel } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
 import { useOrigoData } from "@/lib/hooks/use-origo-data";
+import { TaskBoard } from "@/components/tasks/task-board";
+import NotificationProvider from "@/components/notification-provider";
 
 export default function TasksPage() {
   return (
     <ProtectedLayout>
+      <NotificationProvider />
       <ProtectedTasksContent />
     </ProtectedLayout>
   );
@@ -65,6 +66,15 @@ function ProtectedTasksContent() {
       });
     } catch (err) {
       console.error('Failed to update task status:', err);
+    }
+  };
+
+  // Function to handle task priority change (for drag and drop)
+  const handleTaskPriorityChange = async (taskId: string, newPriority: Priority) => {
+    try {
+      await updateTask(taskId, { priority: newPriority });
+    } catch (err) {
+      console.error('Failed to update task priority:', err);
     }
   };
 
@@ -119,92 +129,13 @@ function ProtectedTasksContent() {
         </div>
       </div>
 
-      {/* Eisenhower Matrix - 2x2 Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Urgent & Important */}
-        <Card className="border-red-500/50">
-          <CardHeader className="bg-red-500/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-500" />
-              <CardTitle className="text-lg">🔥 Urgent & Important</CardTitle>
-            </div>
-            <CardDescription>Do First</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-3">
-            <div className="space-y-3">
-              {groupedTasks['urgent_important'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
-              ))}
-              {groupedTasks['urgent_important'].length === 0 && (
-                <p className="text-center text-muted-foreground py-2">No urgent & important tasks</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Important but not Urgent */}
-        <Card className="border-blue-500/50">
-          <CardHeader className="bg-blue-500/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-blue-500" />
-              <CardTitle className="text-lg">⚡ Important</CardTitle>
-            </div>
-            <CardDescription>Schedule</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-3">
-            <div className="space-y-3">
-              {groupedTasks['important'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
-              ))}
-              {groupedTasks['important'].length === 0 && (
-                <p className="text-center text-muted-foreground py-2">No important but not urgent tasks</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Urgent but not Important */}
-        <Card className="border-yellow-500/50">
-          <CardHeader className="bg-yellow-500/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Timer className="w-5 h-5 text-yellow-500" />
-              <CardTitle className="text-lg">⏳ Urgent</CardTitle>
-            </div>
-            <CardDescription>Delegate</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-3">
-            <div className="space-y-3">
-              {groupedTasks['urgent'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
-              ))}
-              {groupedTasks['urgent'].length === 0 && (
-                <p className="text-center text-muted-foreground py-2">No urgent but not important tasks</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Not Urgent & Not Important */}
-        <Card className="border-green-500/50">
-          <CardHeader className="bg-green-500/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Leaf className="w-5 h-5 text-green-500" />
-              <CardTitle className="text-lg">🍃 Optional</CardTitle>
-            </div>
-            <CardDescription>Eliminate</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-3">
-            <div className="space-y-3">
-              {groupedTasks['optional'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
-              ))}
-              {groupedTasks['optional'].length === 0 && (
-                <p className="text-center text-muted-foreground py-2">No optional tasks</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Eisenhower Matrix with Drag and Drop */}
+      <TaskBoard
+        groupedTasks={groupedTasks}
+        onTaskPriorityChange={handleTaskPriorityChange}
+        onTaskStatusChange={handleTaskStatusChange}
+        onTaskDelete={removeTask}
+      />
 
       {/* All Tasks List (when filters are applied) */}
       {(searchTerm || filterPriority !== "all" || filterStatus !== "all") && (
@@ -218,7 +149,57 @@ function ProtectedTasksContent() {
           <CardContent>
             <div className="space-y-3">
               {filteredTasks.map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
+                <div key={task.id} className="p-3 border rounded-lg hover:bg-accent group">
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={task.status === 'done'}
+                      onChange={() => handleTaskStatusChange(task.id)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                          {task.title}
+                        </h3>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                            onClick={() => removeTask(task.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {task.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                      )}
+                      
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <Badge className={getPriorityColor(task.priority)} variant="secondary">
+                          {getPriorityLabel(task.priority)}
+                        </Badge>
+                        
+                        {task.due_date && (
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(task.due_date).toLocaleDateString()}
+                          </Badge>
+                        )}
+                        
+                        {task.tags.map(tag => (
+                          <Badge key={tag} variant="outline">{tag}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
               {filteredTasks.length === 0 && (
                 <p className="text-center text-muted-foreground py-4">No tasks match your filters</p>
@@ -227,63 +208,6 @@ function ProtectedTasksContent() {
           </CardContent>
         </Card>
       )}
-    </div>
-  );
-}
-
-// Task Card Component
-function TaskCard({ task, onStatusChange, onDelete }: { task: Task, onStatusChange: (id: string) => void, onDelete: (id: string) => void }) {
-  return (
-    <div className="p-3 border rounded-lg hover:bg-accent group">
-      <div className="flex items-start gap-3">
-        <input 
-          type="checkbox" 
-          checked={task.status === 'done'}
-          onChange={() => onStatusChange(task.id)}
-          className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h3 className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-              {task.title}
-            </h3>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                <Edit className="w-4 h-4" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                onClick={() => onDelete(task.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          
-          {task.description && (
-            <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-          )}
-          
-          <div className="flex flex-wrap gap-2 mt-2">
-            <Badge className={getPriorityColor(task.priority)} variant="secondary">
-              {getPriorityLabel(task.priority)}
-            </Badge>
-            
-            {task.due_date && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {new Date(task.due_date).toLocaleDateString()}
-              </Badge>
-            )}
-            
-            {task.tags.map(tag => (
-              <Badge key={tag} variant="outline">{tag}</Badge>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
