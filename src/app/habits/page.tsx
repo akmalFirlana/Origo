@@ -1,0 +1,305 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { 
+  Plus, 
+  Search, 
+  Calendar, 
+  CheckCircle2, 
+  Circle, 
+  SkipForward,
+  TrendingUp,
+  CalendarDays,
+  Target
+} from "lucide-react";
+import { Habit, HabitLog, HabitFrequency, HabitLogStatus } from "@/lib/types";
+import { getToday } from "@/lib/utils";
+import ProtectedLayout from "../protected-layout";
+import { SignedIn } from "@clerk/nextjs";
+
+// Mock data for habits
+const mockHabits: Habit[] = [
+  { id: '1', user_id: 'user1', name: 'Morning meditation', description: '10 minutes of mindfulness', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
+  { id: '2', user_id: 'user1', name: 'Exercise', description: '30 minutes of cardio', frequency: 'daily', target_frequency: 5, created_at: '2025-10-10', updated_at: '2025-10-10' },
+  { id: '3', user_id: 'user1', name: 'Read', description: 'Read for 20 minutes', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
+  { id: '4', user_id: 'user1', name: 'Weekly planning', description: 'Plan the week ahead', frequency: 'weekly', target_frequency: 1, created_at: '2025-10-10', updated_at: '2025-10-10' },
+];
+
+// Mock habit logs
+const mockHabitLogs: HabitLog[] = [
+  { id: '1', habit_id: '1', user_id: 'user1', date: getToday(), status: 'done', created_at: '2025-10-12T08:00:00Z' },
+  { id: '2', habit_id: '2', user_id: 'user1', date: getToday(), status: 'missed', created_at: '2025-10-12T09:00:00Z' },
+  { id: '3', habit_id: '3', user_id: 'user1', date: getToday(), status: 'done', created_at: '2025-10-12T10:00:00Z' },
+];
+
+export default function HabitsPage() {
+  return (
+    <ProtectedLayout>
+      <ProtectedHabitsContent />
+    </ProtectedLayout>
+  );
+}
+
+function ProtectedHabitsContent() {
+  const [habits, setHabits] = useState<Habit[]>(mockHabits);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>(mockHabitLogs);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterFrequency, setFilterFrequency] = useState<HabitFrequency | "all">("all");
+  
+  // Calculate today's habits and logs
+  const today = getToday();
+  const todayHabits = habits.map(habit => {
+    const log = habitLogs.find(log => log.habit_id === habit.id && log.date === today);
+    return {
+      habit,
+      log: log || null
+    };
+  });
+
+  // Filter habits based on search and filters
+  const filteredHabits = habits.filter(habit => {
+    const matchesSearch = habit.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          habit.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFrequency = filterFrequency === "all" || habit.frequency === filterFrequency;
+    
+    return matchesSearch && matchesFrequency;
+  });
+
+  // Function to handle habit check
+  const handleHabitCheck = (habitId: string, status: HabitLogStatus) => {
+    const log = habitLogs.find(log => log.habit_id === habitId && log.date === today);
+    const todayLog: HabitLog = {
+      id: log?.id || `log-${habitId}-${today}`,
+      habit_id: habitId,
+      user_id: 'user1', // In real app, get from auth context
+      date: today,
+      status,
+      created_at: new Date().toISOString()
+    };
+
+    if (log) {
+      // Update existing log
+      setHabitLogs(prev => 
+        prev.map(log => log.id === todayLog.id ? todayLog : log)
+      );
+    } else {
+      // Add new log
+      setHabitLogs(prev => [...prev, todayLog]);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Habits</h1>
+          <p className="text-muted-foreground">Build productive routines and track your progress</p>
+        </div>
+        <Button>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Habit
+        </Button>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="relative flex-1 w-full md:max-w-sm">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search habits..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        
+        <div className="flex gap-2 flex-wrap">
+          <select 
+            value={filterFrequency} 
+            onChange={(e) => setFilterFrequency(e.target.value as HabitFrequency | "all")}
+            className="border rounded-md px-3 py-2 text-sm"
+          >
+            <option value="all">All Frequencies</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Today's Habits */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Today's Habits</CardTitle>
+              <CardDescription>{new Date(today).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
+            </div>
+            <Badge variant="outline">{todayHabits.filter(h => h.log?.status === 'done').length} / {todayHabits.length} completed</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {todayHabits.map(({ habit, log }) => (
+              <HabitCard 
+                key={habit.id} 
+                habit={habit} 
+                log={log}
+                onCheck={(status) => handleHabitCheck(habit.id, status)}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Habit Progress */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Weekly Streak
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">5 days</div>
+            <p className="text-sm text-muted-foreground">Your current streak</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Completion Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">78%</div>
+            <p className="text-sm text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="w-5 h-5" />
+              Active Habits
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{habits.length}</div>
+            <p className="text-sm text-muted-foreground">You're tracking</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* All Habits List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Habits</CardTitle>
+          <CardDescription>Manage your habit collection</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredHabits.map(habit => (
+              <div key={habit.id} className="p-4 border rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium">{habit.name}</h3>
+                    {habit.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{habit.description}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline">{habit.frequency}</Badge>
+                      <Badge variant="outline">
+                        {habit.target_frequency}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Habit Card Component
+function HabitCard({ 
+  habit, 
+  log, 
+  onCheck 
+}: { 
+  habit: Habit; 
+  log: HabitLog | null; 
+  onCheck: (status: HabitLogStatus) => void; 
+}) {
+  return (
+    <div className="p-4 border rounded-lg">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="font-medium">{habit.name}</h3>
+          {habit.description && (
+            <p className="text-sm text-muted-foreground mt-1">{habit.description}</p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline">{habit.frequency}</Badge>
+            <Badge variant="outline">
+              {habit.target_frequency}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="flex gap-1">
+          {log?.status === 'done' ? (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onCheck('missed')}
+              className="border-green-500 text-green-500 hover:bg-green-500/10"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onCheck('done')}
+              className="border-green-500 text-green-500 hover:bg-green-500/10"
+            >
+              <Circle className="w-4 h-4" />
+            </Button>
+          )}
+          
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => onCheck('skipped')}
+            className={log?.status === 'skipped' 
+              ? 'border-yellow-500 text-yellow-500 hover:bg-yellow-500/10' 
+              : 'border-gray-300 hover:bg-gray-100'}
+          >
+            <SkipForward className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <div className="mt-3 text-xs text-muted-foreground">
+        {log?.status === 'done' && '✓ Completed today'}
+        {log?.status === 'skipped' && '→ Skipped today'}
+        {log?.status === 'missed' && '○ Not completed'}
+        {!log && '○ Not tracked yet'}
+      </div>
+    </div>
+  );
+}

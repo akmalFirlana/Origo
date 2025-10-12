@@ -1,0 +1,242 @@
+-- Create the users table for profiles (using existing pattern from template)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT UNIQUE NOT NULL, -- This will store the Clerk user ID
+  theme_preference TEXT DEFAULT 'system', -- 'light', 'dark', or 'system'
+  notification_preferences JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create the tasks table
+CREATE TABLE IF NOT EXISTS public.tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  title TEXT NOT NULL,
+  description TEXT,
+  priority TEXT CHECK (priority IN ('urgent_important', 'important', 'urgent', 'optional')), -- Eisenhower matrix
+  due_date TIMESTAMP WITH TIME ZONE,
+  tags TEXT[],
+  status TEXT CHECK (status IN ('todo', 'in_progress', 'done')) DEFAULT 'todo',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Create the habits table
+CREATE TABLE IF NOT EXISTS public.habits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  name TEXT NOT NULL,
+  description TEXT,
+  frequency TEXT CHECK (frequency IN ('daily', 'weekly', 'monthly')) DEFAULT 'daily',
+  target_frequency INTEGER DEFAULT 1, -- Number of times per period (e.g., 5x per week)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create the habit logs table to track daily habit completion
+CREATE TABLE IF NOT EXISTS public.habit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL, -- Clerk user ID
+  date DATE NOT NULL,
+  status TEXT CHECK (status IN ('done', 'skipped', 'missed')) DEFAULT 'missed',
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create the events table for calendar
+CREATE TABLE IF NOT EXISTS public.events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  title TEXT NOT NULL,
+  description TEXT,
+  location TEXT,
+  start_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  reminders INTEGER[], -- Array of minutes before event to remind (e.g., [15, 60, 1440])
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create the activity logs table for global history
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  entity_type TEXT NOT NULL CHECK (entity_type IN ('task', 'habit', 'event', 'note')), -- Type of entity
+  entity_id UUID NOT NULL, -- ID of the related entity
+  action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete', 'complete', 'incomplete', 'check', 'uncheck', 'skip')), -- What happened
+  metadata JSONB, -- Additional data about the action
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security on all tables
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.habit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for profiles table
+CREATE POLICY "Users can read own profile" ON public.profiles
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own profile" ON public.profiles
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own profile" ON public.profiles
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- RLS Policies for tasks table
+CREATE POLICY "Users can read own tasks" ON public.tasks
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own tasks" ON public.tasks
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own tasks" ON public.tasks
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own tasks" ON public.tasks
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- RLS Policies for habits table
+CREATE POLICY "Users can read own habits" ON public.habits
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own habits" ON public.habits
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own habits" ON public.habits
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own habits" ON public.habits
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- RLS Policies for habit_logs table
+CREATE POLICY "Users can read own habit logs" ON public.habit_logs
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own habit logs" ON public.habit_logs
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own habit logs" ON public.habit_logs
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own habit logs" ON public.habit_logs
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- RLS Policies for events table
+CREATE POLICY "Users can read own events" ON public.events
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own events" ON public.events
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own events" ON public.events
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own events" ON public.events
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- RLS Policies for activity_logs table
+CREATE POLICY "Users can read own activity logs" ON public.activity_logs
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own activity logs" ON public.activity_logs
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own activity logs" ON public.activity_logs
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own activity logs" ON public.activity_logs
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON public.tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON public.tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_habits_user_id ON public.habits(user_id);
+CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_id ON public.habit_logs(habit_id);
+CREATE INDEX IF NOT EXISTS idx_habit_logs_user_id ON public.habit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON public.habit_logs(date);
+CREATE INDEX IF NOT EXISTS idx_events_user_id ON public.events(user_id);
+CREATE INDEX IF NOT EXISTS idx_events_start_at ON public.events(start_at);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON public.activity_logs(entity_type, entity_id);
+
+-- Create updated_at triggers
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_profiles_updated_at
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tasks_updated_at
+  BEFORE UPDATE ON public.tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_habits_updated_at
+  BEFORE UPDATE ON public.habits
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_events_updated_at
+  BEFORE UPDATE ON public.events
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Create a function to automatically log activities
+CREATE OR REPLACE FUNCTION log_activity()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insert an activity log record
+  INSERT INTO public.activity_logs (user_id, entity_type, entity_id, action, metadata)
+  VALUES (
+    CASE
+      WHEN TG_TABLE_NAME = 'tasks' THEN NEW.user_id
+      WHEN TG_TABLE_NAME = 'habits' THEN NEW.user_id
+      WHEN TG_TABLE_NAME = 'events' THEN NEW.user_id
+    END,
+    TG_TABLE_NAME,
+    CASE
+      WHEN TG_TABLE_NAME = 'tasks' THEN NEW.id
+      WHEN TG_TABLE_NAME = 'habits' THEN NEW.id
+      WHEN TG_TABLE_NAME = 'events' THEN NEW.id
+    END,
+    TG_OP,
+    json_build_object(
+      'old', CASE WHEN TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN OLD END,
+      'new', CASE WHEN TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN NEW END
+    )
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for automatic activity logging
+CREATE TRIGGER log_task_activity
+  AFTER INSERT OR UPDATE OR DELETE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION log_activity();
+
+CREATE TRIGGER log_habit_activity
+  AFTER INSERT OR UPDATE OR DELETE ON public.habits
+  FOR EACH ROW EXECUTE FUNCTION log_activity();
+
+CREATE TRIGGER log_event_activity
+  AFTER INSERT OR UPDATE OR DELETE ON public.events
+  FOR EACH ROW EXECUTE FUNCTION log_activity();
