@@ -2,20 +2,17 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Activity as ActivityIcon, 
-  Calendar, 
-  CheckSquare, 
-  CalendarDays, 
+import {
+  Activity as ActivityIcon,
+  Calendar,
+  CheckSquare,
+  CalendarDays,
   Filter,
   Search
 } from "lucide-react";
-import { ActivityLog, ActivityAction } from "@/lib/types";
+import { ActivityLog, ActivityAction, ActivityMetadata } from "@/lib/types";
 import { format } from "date-fns";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 // Mock data for activity logs
 const mockActivityLogs: ActivityLog[] = [
@@ -65,7 +62,15 @@ function ProtectedActivityContent() {
     groupedLogs[date].push(log);
   });
 
-  const getActionText = (action: ActivityAction, entityType: string, metadata: any) => {
+  const getActionText = (
+    action: ActivityAction,
+    entityType: ActivityLog['entity_type'],
+    metadata: ActivityMetadata
+  ) => {
+    const metadataName = typeof metadata.name === 'string' ? metadata.name : undefined;
+    const metadataTitle = typeof metadata.title === 'string' ? metadata.title : undefined;
+    const metadataLabel = metadataName || metadataTitle || entityType;
+
     switch (action) {
       case 'create':
         return `Created a new ${entityType}`;
@@ -78,11 +83,11 @@ function ProtectedActivityContent() {
       case 'incomplete':
         return `Marked ${entityType} as incomplete`;
       case 'check':
-        return `Checked off: ${metadata.name || metadata.title || entityType}`;
+        return `Checked off: ${metadataLabel}`;
       case 'uncheck':
-        return `Unchecked: ${metadata.name || metadata.title || entityType}`;
+        return `Unchecked: ${metadataLabel}`;
       case 'skip':
-        return `Skipped: ${metadata.name || metadata.title || entityType}`;
+        return `Skipped: ${metadataLabel}`;
       default:
         return `${action} ${entityType}`;
     }
@@ -108,7 +113,7 @@ function ProtectedActivityContent() {
     }
   };
 
-  const getEntityTypeIcon = (entityType: string) => {
+  const getEntityTypeIcon = (entityType: ActivityLog['entity_type']) => {
     switch (entityType) {
       case 'task':
         return <CheckSquare className="w-4 h-4" />;
@@ -224,15 +229,15 @@ function ProtectedActivityContent() {
                             {getActionText(log.action, log.entity_type, log.metadata)}
                           </p>
                           
-                          {log.metadata.title && log.entity_type !== 'habit' && (
+                          {typeof log.metadata.title === 'string' && log.entity_type !== 'habit' && (
                             <p className="text-sm text-muted-foreground mt-1 ml-7">
-                              "{log.metadata.title}"
+                              &ldquo;{log.metadata.title}&rdquo;
                             </p>
                           )}
-                          
-                          {log.metadata.name && log.entity_type === 'habit' && (
+
+                          {typeof log.metadata.name === 'string' && log.entity_type === 'habit' && (
                             <p className="text-sm text-muted-foreground mt-1 ml-7">
-                              "{log.metadata.name}"
+                              &ldquo;{log.metadata.name}&rdquo;
                             </p>
                           )}
                         </div>

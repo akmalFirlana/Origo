@@ -1,27 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Plus, 
-  Search, 
-  Calendar, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  Clock,
   Flame,
   Zap,
   Timer,
   Leaf,
-  MoreHorizontal,
   Edit,
   Trash2
 } from "lucide-react";
 import { Task, Priority } from "@/lib/types";
 import { getPriorityColor, getPriorityLabel } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 // Mock data for tasks
 const mockTasks: Task[] = [

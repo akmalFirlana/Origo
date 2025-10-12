@@ -5,21 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  CalendarDays, 
-  Calendar as CalendarIcon, 
-  CheckSquare, 
+import {
+  CalendarDays,
+  Calendar as CalendarIcon,
+  CheckSquare,
   Clock,
   Flame,
-  Sun,
-  Moon,
   Plus
 } from "lucide-react";
 import { getToday } from "@/lib/utils";
 import { Task, Habit, Event } from "@/lib/types";
 import { useUser } from "@clerk/nextjs";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 // Mock data for now - these will be replaced with actual API calls
 const mockTasks: Task[] = [
@@ -38,8 +35,6 @@ const mockEvents: Event[] = [
   { id: '1', user_id: 'user1', title: 'Team meeting', description: 'Weekly sync', location: 'Conference Room A', start_at: '2025-10-12T10:00:00Z', end_at: '2025-10-12T11:00:00Z', reminders: [15], created_at: '2025-10-10', updated_at: '2025-10-10' },
   { id: '2', user_id: 'user1', title: 'Doctor appointment', description: 'Annual checkup', location: 'City Hospital', start_at: '2025-10-13T14:00:00Z', end_at: '2025-10-13T15:00:00Z', reminders: [60], created_at: '2025-10-10', updated_at: '2025-10-10' },
 ];
-
-import { SignedIn } from "@clerk/nextjs";
 
 export default function DashboardPage() {
   return (
@@ -75,7 +70,7 @@ function ProtectedDashboardContent() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {user?.firstName || 'User'}. Here's what's happening today.</p>
+          <p className="text-muted-foreground">Welcome back, {user?.firstName || 'User'}. Here&rsquo;s what&rsquo;s happening today.</p>
         </div>
         <Button>
           <Plus className="w-4 h-4 mr-2" />
@@ -149,7 +144,7 @@ function ProtectedDashboardContent() {
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle>Today's Tasks</CardTitle>
+              <CardTitle>Today&rsquo;s Tasks</CardTitle>
               <Button variant="outline" size="sm">View All</Button>
             </div>
             <CardDescription>Tasks due today and upcoming</CardDescription>

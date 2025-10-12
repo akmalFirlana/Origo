@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -23,12 +24,12 @@ export default function Home() {
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Origo Productivity App</h1>
         <p className="text-muted-foreground mb-6">Please sign in to continue</p>
-        <a 
+        <Link
           href="/sign-in"
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 inline-block"
         >
           Sign In
-        </a>
+        </Link>
       </div>
     </div>
   );

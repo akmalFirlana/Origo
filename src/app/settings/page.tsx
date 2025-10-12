@@ -7,7 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Theme, NotificationPreferences } from "@/lib/types";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 export default function SettingsPage() {
   return (
@@ -123,7 +122,7 @@ function ProtectedSettingsContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Daily Digest</Label>
-                  <p className="text-sm text-muted-foreground">Summary of your day's activities</p>
+                  <p className="text-sm text-muted-foreground">Summary of your day&rsquo;s activities</p>
                 </div>
                 <Switch 
                   checked={notifications.dailyDigest} 

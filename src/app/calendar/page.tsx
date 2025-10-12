@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
   Clock,
   MapPin,
   MoreHorizontal
@@ -16,7 +15,6 @@ import {
 import { Event } from "@/lib/types";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, isSameMonth, isSameDay, addDays } from "date-fns";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 // Mock data for events
 const mockEvents: Event[] = [
@@ -37,7 +35,6 @@ export default function CalendarPage() {
 function ProtectedCalendarContent() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events] = useState<Event[]>(mockEvents);
-  const [view, setView] = useState<'month' | 'week' | 'day'>('month');
   
   // Get the current month's events
   const currentMonthEvents = events.filter(event => 
@@ -82,7 +79,7 @@ function ProtectedCalendarContent() {
   const renderDays = () => {
     const dateFormat = "EEE";
     const days = [];
-    let startDate = startOfWeek(currentDate);
+    const startDate = startOfWeek(currentDate);
 
     for (let i = 0; i < 7; i++) {
       days.push(
@@ -188,7 +185,7 @@ function ProtectedCalendarContent() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                Today's Events
+                Today&rsquo;s Events
               </CardTitle>
               <CardDescription>
                 {format(new Date(), "EEEE, MMMM d, yyyy")}
