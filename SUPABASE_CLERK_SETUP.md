@@ -98,7 +98,7 @@ export async function ProfilePage() {
 
 ## Row Level Security (RLS)
 
-Create RLS policies in your Supabase tables that use Clerk user IDs. Example:
+Create RLS policies in your Supabase tables that use Supabase auth user IDs. Example:
 
 ```sql
 -- Enable RLS on your table
@@ -106,11 +106,11 @@ ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to read their own data
 CREATE POLICY "Users can read own data" ON your_table
-  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+  FOR SELECT USING (auth.uid() = user_id);
 
 -- Allow users to insert their own data
 CREATE POLICY "Users can insert own data" ON your_table
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 ```
 
 ## Troubleshooting
