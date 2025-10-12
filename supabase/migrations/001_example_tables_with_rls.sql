@@ -1,12 +1,12 @@
 -- Example migration showing RLS implementation for Clerk + Supabase integration
--- This creates sample tables with proper RLS policies based on Clerk user IDs
+-- This creates sample tables with proper RLS policies based on Supabase auth user IDs
 
 -- Create a posts table as an example
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT,
-  user_id TEXT NOT NULL, -- This will store the Clerk user ID
+  user_id UUID NOT NULL, -- Supabase auth user ID
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  user_id TEXT NOT NULL, -- This will store the Clerk user ID
+  user_id UUID NOT NULL, -- Supabase auth user ID
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
 -- Create a profiles table for user-specific data
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT UNIQUE NOT NULL, -- This will store the Clerk user ID
+  user_id UUID UNIQUE NOT NULL, -- Supabase auth user ID
   bio TEXT,
   website TEXT,
   avatar_url TEXT,
@@ -45,15 +45,15 @@ CREATE POLICY "Anyone can read posts" ON public.posts
 
 -- Users can only insert posts as themselves
 CREATE POLICY "Users can insert own posts" ON public.posts
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can only update their own posts
 CREATE POLICY "Users can update own posts" ON public.posts
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- Users can only delete their own posts
 CREATE POLICY "Users can delete own posts" ON public.posts
-  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for comments table
 -- Users can read all comments (public access)
@@ -62,34 +62,34 @@ CREATE POLICY "Anyone can read comments" ON public.comments
 
 -- Users can only insert comments as themselves
 CREATE POLICY "Users can insert own comments" ON public.comments
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can only update their own comments
 CREATE POLICY "Users can update own comments" ON public.comments
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- Users can only delete their own comments
 CREATE POLICY "Users can delete own comments" ON public.comments
-  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for profiles table
 -- Users can read public profiles or their own profile
 CREATE POLICY "Users can read public profiles or own profile" ON public.profiles
   FOR SELECT USING (
-    is_public = true OR auth.jwt() ->> 'sub' = user_id
+    is_public = true OR auth.uid() = user_id
   );
 
 -- Users can only insert their own profile
 CREATE POLICY "Users can insert own profile" ON public.profiles
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can only update their own profile
 CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- Users can only delete their own profile
 CREATE POLICY "Users can delete own profile" ON public.profiles
-  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON public.posts(user_id);
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public.private_notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT,
-  user_id TEXT NOT NULL, -- This will store the Clerk user ID
+  user_id UUID NOT NULL, -- Supabase auth user ID
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -137,15 +137,15 @@ ALTER TABLE public.private_notes ENABLE ROW LEVEL SECURITY;
 
 -- Private notes can only be accessed by the owner
 CREATE POLICY "Users can only access own private notes" ON public.private_notes
-  FOR ALL USING (auth.jwt() ->> 'sub' = user_id);
+  FOR ALL USING (auth.uid() = user_id);
 
 -- Example of collaborative table with shared access
 CREATE TABLE IF NOT EXISTS public.collaborations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  owner_id TEXT NOT NULL, -- Clerk user ID of the owner
-  collaborators TEXT[] DEFAULT '{}', -- Array of Clerk user IDs
+  owner_id UUID NOT NULL, -- Supabase auth user ID of the owner
+  collaborators UUID[] DEFAULT '{}'::uuid[], -- Array of collaborator user IDs
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -155,21 +155,21 @@ ALTER TABLE public.collaborations ENABLE ROW LEVEL SECURITY;
 -- Owners and collaborators can read
 CREATE POLICY "Owners and collaborators can read collaborations" ON public.collaborations
   FOR SELECT USING (
-    auth.jwt() ->> 'sub' = owner_id OR 
-    auth.jwt() ->> 'sub' = ANY(collaborators)
+    auth.uid() = owner_id OR 
+    auth.uid() = ANY(collaborators)
   );
 
 -- Only owners can insert
 CREATE POLICY "Owners can insert collaborations" ON public.collaborations
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = owner_id);
+  FOR INSERT WITH CHECK (auth.uid() = owner_id);
 
 -- Only owners can update
 CREATE POLICY "Owners can update collaborations" ON public.collaborations
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = owner_id);
+  FOR UPDATE USING (auth.uid() = owner_id);
 
 -- Only owners can delete
 CREATE POLICY "Owners can delete collaborations" ON public.collaborations
-  FOR DELETE USING (auth.jwt() ->> 'sub' = owner_id);
+  FOR DELETE USING (auth.uid() = owner_id);
 
 CREATE INDEX IF NOT EXISTS idx_collaborations_owner_id ON public.collaborations(owner_id);
 CREATE INDEX IF NOT EXISTS idx_collaborations_collaborators ON public.collaborations USING GIN(collaborators);

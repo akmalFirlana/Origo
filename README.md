@@ -109,7 +109,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 - 🌙 Dark mode with system preference detection
 - 🎯 Built-in setup dashboard with service status
 - 🚀 App Router with Server Components
-- 🔒 Row Level Security examples with Clerk user IDs
+- 🔒 Row Level Security examples with Supabase auth user IDs
 - 📱 Responsive design with TailwindCSS v4
 - 🎨 Custom fonts (Geist Sans, Geist Mono, Parkinsans)
 
@@ -146,7 +146,7 @@ codeguide-starter-kit/
 This starter includes modern Clerk + Supabase integration:
 
 - **Third-party auth** (not deprecated JWT templates)
-- **Row Level Security** policies using `auth.jwt() ->> 'sub'` for Clerk user IDs
+- **Row Level Security** policies using `auth.uid()` for Supabase auth user IDs
 - **Example migrations** with various RLS patterns (user-owned, public/private, collaboration)
 - **Server-side client** with automatic Clerk token handling
 
