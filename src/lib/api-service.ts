@@ -301,7 +301,7 @@ export async function getTags(): Promise<Tag[]> {
   return response.json();
 }
 
-export async function createTag(tagData: Omit<Tag, 'id' | 'user_id' | 'created_at'>): Promise<Tag> {
+export async function createTag(tagData: Omit<Tag, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Tag> {
   const response = await fetch(`${API_BASE_URL}/tags`, {
     method: "POST",
     headers: await getAuthHeaders(),

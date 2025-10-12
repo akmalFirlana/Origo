@@ -241,7 +241,7 @@ export const useOrigoData = () => {
   };
 
   // Tag functions
-  const addTag = async (tagData: Omit<Tag, 'id' | 'user_id' | 'created_at'>) => {
+  const addTag = async (tagData: Omit<Tag, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
     
     try {
