@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
-  Plus, 
-  Search, 
-  Calendar, 
-  CheckCircle2, 
-  Circle, 
+import {
+  Plus,
+  Search,
+  CheckCircle2,
+  Circle,
   SkipForward,
   TrendingUp,
   CalendarDays,
@@ -19,7 +18,6 @@ import {
 import { Habit, HabitLog, HabitFrequency, HabitLogStatus } from "@/lib/types";
 import { getToday } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
-import { SignedIn } from "@clerk/nextjs";
 
 // Mock data for habits
 const mockHabits: Habit[] = [
@@ -45,7 +43,7 @@ export default function HabitsPage() {
 }
 
 function ProtectedHabitsContent() {
-  const [habits, setHabits] = useState<Habit[]>(mockHabits);
+  const [habits] = useState<Habit[]>(mockHabits);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>(mockHabitLogs);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterFrequency, setFilterFrequency] = useState<HabitFrequency | "all">("all");
@@ -131,12 +129,12 @@ function ProtectedHabitsContent() {
         </div>
       </div>
 
-      {/* Today's Habits */}
+      {/* Today&rsquo;s Habits */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Today's Habits</CardTitle>
+              <CardTitle>Today&rsquo;s Habits</CardTitle>
               <CardDescription>{new Date(today).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
             </div>
             <Badge variant="outline">{todayHabits.filter(h => h.log?.status === 'done').length} / {todayHabits.length} completed</Badge>
@@ -193,7 +191,7 @@ function ProtectedHabitsContent() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{habits.length}</div>
-            <p className="text-sm text-muted-foreground">You're tracking</p>
+            <p className="text-sm text-muted-foreground">You&rsquo;re tracking</p>
           </CardContent>
         </Card>
       </div>

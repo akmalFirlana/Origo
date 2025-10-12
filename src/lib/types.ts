@@ -79,12 +79,21 @@ export type Event = {
 
 export type ActivityAction = 'create' | 'update' | 'delete' | 'complete' | 'incomplete' | 'check' | 'uncheck' | 'skip';
 
+export type ActivityMetadataValue = string | number | boolean | null | undefined;
+
+export type ActivityMetadata = {
+  title?: string;
+  status?: string;
+  name?: string;
+  start_at?: string;
+} & Record<string, ActivityMetadataValue>;
+
 export type ActivityLog = {
   id: string;
   user_id: string;
   entity_type: 'task' | 'habit' | 'event' | 'note';
   entity_id: string;
   action: ActivityAction;
-  metadata: Record<string, any>;
+  metadata: ActivityMetadata;
   created_at: string;
 };

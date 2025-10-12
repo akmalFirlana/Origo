@@ -1,16 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase";
-import { 
-  Task, 
-  Habit, 
-  HabitLog, 
-  Event, 
-  ActivityLog, 
-  UserProfile,
-  Priority,
-  TaskStatus,
-  HabitFrequency,
-  HabitLogStatus,
-  ActivityAction
+import {
+  Task,
+  Habit,
+  HabitLog,
+  Event,
+  ActivityLog,
+  UserProfile
 } from "@/lib/types";
 
 // Task Service
