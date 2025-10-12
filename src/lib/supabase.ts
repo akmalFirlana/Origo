@@ -17,13 +17,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export async function createSupabaseServerClient() {
   const { getToken } = await auth();
-  const token = await getToken();
+  const token = await getToken({ template: "supabase" });
+
+  const globalHeaders: Record<string, string> = {};
+  if (token) {
+    globalHeaders.Authorization = `Bearer ${token}`;
+  }
 
   return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
+      headers: globalHeaders,
       fetch: (url, options = {}) => {
         return fetch(url, {
           ...options,
