@@ -19,14 +19,7 @@ import {
 import { Task, Priority } from "@/lib/types";
 import { getPriorityColor, getPriorityLabel } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
-
-// Mock data for tasks
-const mockTasks: Task[] = [
-  { id: '1', user_id: 'user1', title: 'Complete project proposal', priority: 'urgent_important', due_date: '2025-10-13T10:00:00Z', status: 'todo', created_at: '2025-10-12T08:00:00Z', tags: ['work', 'important'], description: 'Finish the proposal for the new client project' },
-  { id: '2', user_id: 'user1', title: 'Schedule team meeting', priority: 'important', due_date: '2025-10-15T14:00:00Z', status: 'todo', created_at: '2025-10-12T09:00:00Z', tags: ['work'], description: 'Weekly sync with the development team' },
-  { id: '3', user_id: 'user1', title: 'Buy groceries', priority: 'urgent', due_date: '2025-10-12T18:00:00Z', status: 'in_progress', created_at: '2025-10-12T10:00:00Z', tags: ['personal'], description: 'Get ingredients for dinner' },
-  { id: '4', user_id: 'user1', title: 'Read new book chapter', priority: 'optional', due_date: '2025-10-20T20:00:00Z', status: 'todo', created_at: '2025-10-12T11:00:00Z', tags: ['personal', 'learning'], description: 'Continue reading the productivity book' },
-];
+import { useOrigoData } from "@/lib/hooks/use-origo-data";
 
 export default function TasksPage() {
   return (
@@ -37,7 +30,7 @@ export default function TasksPage() {
 }
 
 function ProtectedTasksContent() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const { tasks, loading, error, updateTask, removeTask } = useOrigoData();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "todo" | "in_progress" | "done">("all");
@@ -61,18 +54,18 @@ function ProtectedTasksContent() {
   });
 
   // Function to handle task status change
-  const handleTaskStatusChange = (taskId: string) => {
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.id === taskId 
-          ? { 
-              ...task, 
-              status: task.status === 'done' ? 'todo' : 'done',
-              completed_at: task.status === 'done' ? undefined : new Date().toISOString()
-            } 
-          : task
-      )
-    );
+  const handleTaskStatusChange = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      await updateTask(taskId, { 
+        status: task.status === 'done' ? 'todo' : 'done',
+        completed_at: task.status === 'done' ? undefined : new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('Failed to update task status:', err);
+    }
   };
 
   return (
@@ -140,7 +133,7 @@ function ProtectedTasksContent() {
           <CardContent className="pt-3">
             <div className="space-y-3">
               {groupedTasks['urgent_important'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
               ))}
               {groupedTasks['urgent_important'].length === 0 && (
                 <p className="text-center text-muted-foreground py-2">No urgent & important tasks</p>
@@ -161,7 +154,7 @@ function ProtectedTasksContent() {
           <CardContent className="pt-3">
             <div className="space-y-3">
               {groupedTasks['important'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
               ))}
               {groupedTasks['important'].length === 0 && (
                 <p className="text-center text-muted-foreground py-2">No important but not urgent tasks</p>
@@ -182,7 +175,7 @@ function ProtectedTasksContent() {
           <CardContent className="pt-3">
             <div className="space-y-3">
               {groupedTasks['urgent'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
               ))}
               {groupedTasks['urgent'].length === 0 && (
                 <p className="text-center text-muted-foreground py-2">No urgent but not important tasks</p>
@@ -203,7 +196,7 @@ function ProtectedTasksContent() {
           <CardContent className="pt-3">
             <div className="space-y-3">
               {groupedTasks['optional'].map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
               ))}
               {groupedTasks['optional'].length === 0 && (
                 <p className="text-center text-muted-foreground py-2">No optional tasks</p>
@@ -225,7 +218,7 @@ function ProtectedTasksContent() {
           <CardContent>
             <div className="space-y-3">
               {filteredTasks.map(task => (
-                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} />
+                <TaskCard key={task.id} task={task} onStatusChange={handleTaskStatusChange} onDelete={removeTask} />
               ))}
               {filteredTasks.length === 0 && (
                 <p className="text-center text-muted-foreground py-4">No tasks match your filters</p>
@@ -239,7 +232,7 @@ function ProtectedTasksContent() {
 }
 
 // Task Card Component
-function TaskCard({ task, onStatusChange }: { task: Task, onStatusChange: (id: string) => void }) {
+function TaskCard({ task, onStatusChange, onDelete }: { task: Task, onStatusChange: (id: string) => void, onDelete: (id: string) => void }) {
   return (
     <div className="p-3 border rounded-lg hover:bg-accent group">
       <div className="flex items-start gap-3">
@@ -258,7 +251,12 @@ function TaskCard({ task, onStatusChange }: { task: Task, onStatusChange: (id: s
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:text-red-700">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                onClick={() => onDelete(task.id)}
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>

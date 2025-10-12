@@ -327,6 +327,77 @@ export async function getActivityLogs(userId: string, from?: string, to?: string
   return data as ActivityLog[];
 }
 
+// Tag Service
+export async function getTags(userId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  const { data, error } = await supabase
+    .from('tags')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error fetching tags:', error);
+    throw new Error('Failed to fetch tags');
+  }
+  
+  return data as Tag[];
+}
+
+export async function createTag(tagData: Omit<Tag, 'id' | 'user_id' | 'created_at'>, userId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  const { data, error } = await supabase
+    .from('tags')
+    .insert([{ ...tagData, user_id: userId }])
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error creating tag:', error);
+    throw new Error('Failed to create tag');
+  }
+  
+  return data as Tag;
+}
+
+export async function updateTag(tagId: string, tagData: Partial<Tag>, userId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  const { data, error } = await supabase
+    .from('tags')
+    .update({ ...tagData, updated_at: new Date().toISOString() })
+    .eq('id', tagId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('Error updating tag:', error);
+    throw new Error('Failed to update tag');
+  }
+  
+  return data as Tag;
+}
+
+export async function deleteTag(tagId: string, userId: string) {
+  const supabase = await createSupabaseServerClient();
+  
+  const { error } = await supabase
+    .from('tags')
+    .delete()
+    .eq('id', tagId)
+    .eq('user_id', userId);
+  
+  if (error) {
+    console.error('Error deleting tag:', error);
+    throw new Error('Failed to delete tag');
+  }
+  
+  return { success: true };
+}
+
 // Profile Service
 export async function getUserProfile(userId: string) {
   const supabase = await createSupabaseServerClient();

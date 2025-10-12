@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,21 +20,7 @@ import {
 import { Habit, HabitLog, HabitFrequency, HabitLogStatus } from "@/lib/types";
 import { getToday } from "@/lib/utils";
 import ProtectedLayout from "../protected-layout";
-
-// Mock data for habits
-const mockHabits: Habit[] = [
-  { id: '1', user_id: 'user1', name: 'Morning meditation', description: '10 minutes of mindfulness', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '2', user_id: 'user1', name: 'Exercise', description: '30 minutes of cardio', frequency: 'daily', target_frequency: 5, created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '3', user_id: 'user1', name: 'Read', description: 'Read for 20 minutes', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '4', user_id: 'user1', name: 'Weekly planning', description: 'Plan the week ahead', frequency: 'weekly', target_frequency: 1, created_at: '2025-10-10', updated_at: '2025-10-10' },
-];
-
-// Mock habit logs
-const mockHabitLogs: HabitLog[] = [
-  { id: '1', habit_id: '1', user_id: 'user1', date: getToday(), status: 'done', created_at: '2025-10-12T08:00:00Z' },
-  { id: '2', habit_id: '2', user_id: 'user1', date: getToday(), status: 'missed', created_at: '2025-10-12T09:00:00Z' },
-  { id: '3', habit_id: '3', user_id: 'user1', date: getToday(), status: 'done', created_at: '2025-10-12T10:00:00Z' },
-];
+import { useOrigoData } from "@/lib/hooks/use-origo-data";
 
 export default function HabitsPage() {
   return (
@@ -43,8 +31,7 @@ export default function HabitsPage() {
 }
 
 function ProtectedHabitsContent() {
-  const [habits] = useState<Habit[]>(mockHabits);
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>(mockHabitLogs);
+  const { habits, habitLogs, loading, error, addHabitLog } = useOrigoData();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterFrequency, setFilterFrequency] = useState<HabitFrequency | "all">("all");
   
@@ -68,25 +55,16 @@ function ProtectedHabitsContent() {
   });
 
   // Function to handle habit check
-  const handleHabitCheck = (habitId: string, status: HabitLogStatus) => {
-    const log = habitLogs.find(log => log.habit_id === habitId && log.date === today);
-    const todayLog: HabitLog = {
-      id: log?.id || `log-${habitId}-${today}`,
-      habit_id: habitId,
-      user_id: 'user1', // In real app, get from auth context
-      date: today,
-      status,
-      created_at: new Date().toISOString()
-    };
-
-    if (log) {
-      // Update existing log
-      setHabitLogs(prev => 
-        prev.map(log => log.id === todayLog.id ? todayLog : log)
-      );
-    } else {
-      // Add new log
-      setHabitLogs(prev => [...prev, todayLog]);
+  const handleHabitCheck = async (habitId: string, status: HabitLogStatus) => {
+    try {
+      await addHabitLog({
+        habit_id: habitId,
+        date: today,
+        status,
+        note: '' // Optional note
+      });
+    } catch (err) {
+      console.error('Failed to update habit log:', err);
     }
   };
 
@@ -215,7 +193,7 @@ function ProtectedHabitsContent() {
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="outline">{habit.frequency}</Badge>
                       <Badge variant="outline">
-                        {habit.target_frequency}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
+                        {habit.schedule?.perWeekTarget}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
                       </Badge>
                     </div>
                   </div>
@@ -253,7 +231,7 @@ function HabitCard({
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="outline">{habit.frequency}</Badge>
             <Badge variant="outline">
-              {habit.target_frequency}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
+              {habit.schedule?.perWeekTarget}/{habit.frequency === 'daily' ? 'day' : habit.frequency === 'weekly' ? 'week' : 'month'}
             </Badge>
           </div>
         </div>

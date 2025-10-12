@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS public.habits (
   name TEXT NOT NULL,
   description TEXT,
   frequency TEXT CHECK (frequency IN ('daily', 'weekly', 'monthly')) DEFAULT 'daily',
-  target_frequency INTEGER DEFAULT 1, -- Number of times per period (e.g., 5x per week)
+  schedule JSONB, -- Flexible field for schedule patterns (e.g., {"daysOfWeek": [1,2,3,4,5], "perWeekTarget": 5})
+  notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -71,6 +72,15 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create tags table for tasks and notes
+CREATE TABLE IF NOT EXISTS public.tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  name TEXT NOT NULL,
+  color TEXT, -- Color for UI display
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Enable Row Level Security on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
@@ -78,6 +88,7 @@ ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.habit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for profiles table
 CREATE POLICY "Users can read own profile" ON public.profiles
@@ -157,11 +168,25 @@ CREATE POLICY "Users can update own activity logs" ON public.activity_logs
 CREATE POLICY "Users can delete own activity logs" ON public.activity_logs
   FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
 
+-- RLS Policies for tags table
+CREATE POLICY "Users can read own tags" ON public.tags
+  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert own tags" ON public.tags
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update own tags" ON public.tags
+  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete own tags" ON public.tags
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON public.tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON public.tasks(due_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON public.tasks(priority);
 CREATE INDEX IF NOT EXISTS idx_habits_user_id ON public.habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_id ON public.habit_logs(habit_id);
 CREATE INDEX IF NOT EXISTS idx_habit_logs_user_id ON public.habit_logs(user_id);
@@ -170,15 +195,17 @@ CREATE INDEX IF NOT EXISTS idx_events_user_id ON public.events(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_start_at ON public.events(start_at);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON public.activity_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_tags_user_id ON public.tags(user_id);
 
 -- Create updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$ language 'plpgsql';
 
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
@@ -200,9 +227,14 @@ CREATE TRIGGER update_events_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_tags_updated_at
+  BEFORE UPDATE ON public.tags
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- Create a function to automatically log activities
 CREATE OR REPLACE FUNCTION log_activity()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $
 BEGIN
   -- Insert an activity log record
   INSERT INTO public.activity_logs (user_id, entity_type, entity_id, action, metadata)
@@ -226,7 +258,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
 
 -- Create triggers for automatic activity logging
 CREATE TRIGGER log_task_activity

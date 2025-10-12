@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,24 +16,7 @@ import { getToday } from "@/lib/utils";
 import { Task, Habit, Event } from "@/lib/types";
 import { useUser } from "@clerk/nextjs";
 import ProtectedLayout from "../protected-layout";
-
-// Mock data for now - these will be replaced with actual API calls
-const mockTasks: Task[] = [
-  { id: '1', user_id: 'user1', title: 'Complete project proposal', priority: 'urgent_important', due_date: '2025-10-13', status: 'todo', created_at: '2025-10-12', tags: ['work', 'important'], description: 'Finish the proposal for the new client project' },
-  { id: '2', user_id: 'user1', title: 'Buy groceries', priority: 'urgent', due_date: '2025-10-12', status: 'in_progress', created_at: '2025-10-12', tags: ['personal'], description: 'Get ingredients for dinner' },
-  { id: '3', user_id: 'user1', title: 'Schedule team meeting', priority: 'important', due_date: '2025-10-15', status: 'todo', created_at: '2025-10-12', tags: ['work'], description: 'Weekly sync with the development team' },
-];
-
-const mockHabits: Habit[] = [
-  { id: '1', user_id: 'user1', name: 'Morning meditation', description: '10 minutes of mindfulness', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '2', user_id: 'user1', name: 'Exercise', description: '30 minutes of cardio', frequency: 'daily', target_frequency: 5, created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '3', user_id: 'user1', name: 'Read', description: 'Read for 20 minutes', frequency: 'daily', target_frequency: 7, created_at: '2025-10-10', updated_at: '2025-10-10' },
-];
-
-const mockEvents: Event[] = [
-  { id: '1', user_id: 'user1', title: 'Team meeting', description: 'Weekly sync', location: 'Conference Room A', start_at: '2025-10-12T10:00:00Z', end_at: '2025-10-12T11:00:00Z', reminders: [15], created_at: '2025-10-10', updated_at: '2025-10-10' },
-  { id: '2', user_id: 'user1', title: 'Doctor appointment', description: 'Annual checkup', location: 'City Hospital', start_at: '2025-10-13T14:00:00Z', end_at: '2025-10-13T15:00:00Z', reminders: [60], created_at: '2025-10-10', updated_at: '2025-10-10' },
-];
+import { useOrigoData } from "@/lib/hooks/use-origo-data";
 
 export default function DashboardPage() {
   return (
@@ -46,24 +28,22 @@ export default function DashboardPage() {
 
 function ProtectedDashboardContent() {
   const { user } = useUser();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  const { 
+    tasks, 
+    habits, 
+    events, 
+    loading, 
+    error,
+    loadData 
+  } = useOrigoData();
   
-  useEffect(() => {
-    // In a real app, we would fetch data based on the logged-in user
-    setTasks(mockTasks);
-    setHabits(mockHabits);
-    setEvents(mockEvents);
-  }, []);
-
   // Calculate today's stats
   const today = getToday();
   const todayTasks = tasks.filter(task => task.due_date === today);
   const urgentImportantTasks = tasks.filter(task => task.priority === 'urgent_important');
   
-  // Calculate habit completion stats
-  const habitCompletionRate = 67; // This would be calculated from actual habit logs
+  // Calculate habit completion stats (this would be more complex in reality)
+  const habitCompletionRate = Math.min(100, Math.round((habits.length > 0 ? 67 : 0))); // Placeholder calculation
 
   return (
     <div className="p-6 space-y-6">

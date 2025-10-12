@@ -47,7 +47,11 @@ export type Habit = {
   name: string;
   description?: string;
   frequency: HabitFrequency;
-  target_frequency: number; // Number of times per period
+  schedule?: {
+    daysOfWeek?: number[]; // Array of day numbers (0=Sunday, 1=Monday, etc.)
+    perWeekTarget?: number; // Target number of times per week
+  }; // Flexible schedule pattern
+  notes?: string;
   created_at: string;
   updated_at: string;
 };
@@ -78,6 +82,14 @@ export type Event = {
 };
 
 export type ActivityAction = 'create' | 'update' | 'delete' | 'complete' | 'incomplete' | 'check' | 'uncheck' | 'skip';
+
+export type Tag = {
+  id: string;
+  user_id: string;
+  name: string;
+  color?: string;
+  created_at: string;
+};
 
 export type ActivityMetadataValue = string | number | boolean | null | undefined;
 
