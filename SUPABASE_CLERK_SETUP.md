@@ -123,3 +123,4 @@ CREATE POLICY "Users can insert own data" ON your_table
 ### Token issues
 - Make sure you're using `createSupabaseServerClient()` for server-side operations
 - For client-side, ensure you're passing the Clerk token to Supabase
+- **404 when requesting `getToken({ template: "supabase" })`:** the Supabase token template is missing in Clerk. Re-run the "Connect with Supabase" flow in the Clerk dashboard or manually recreate the template so Clerk can mint tokens with the expected claims.
