@@ -201,12 +201,12 @@ CREATE INDEX IF NOT EXISTS idx_tags_user_id ON public.tags (user_id);
 
 -- Update updated_at column automatically
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER handle_profiles_updated_at 
   BEFORE UPDATE ON public.profiles 
@@ -226,13 +226,13 @@ CREATE TRIGGER handle_events_updated_at
 
 -- Function to create profile automatically when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (user_id)
   VALUES (NEW.id);
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

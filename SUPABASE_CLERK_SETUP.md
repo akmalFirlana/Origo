@@ -98,7 +98,7 @@ export async function ProfilePage() {
 
 ## Row Level Security (RLS)
 
-Create RLS policies in your Supabase tables that use Supabase auth user IDs. Example:
+Create RLS policies in your Supabase tables that compare against the Supabase auth UID (synced from Clerk). Example:
 
 ```sql
 -- Enable RLS on your table

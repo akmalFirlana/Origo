@@ -1,12 +1,12 @@
--- Example migration showing RLS implementation for Clerk + Supabase integration
--- This creates sample tables with proper RLS policies based on Supabase auth user IDs
+- Example migration showing RLS implementation for Clerk + Supabase integration
+- This creates sample tables with proper RLS policies based on Clerk-linked Supabase user IDs (`auth.uid()`)
 
 -- Create a posts table as an example
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT,
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
 -- Create a profiles table for user-specific data
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID UNIQUE NOT NULL, -- Supabase auth user ID
+  user_id UUID UNIQUE NOT NULL, -- Supabase auth UID synced from Clerk
   bio TEXT,
   website TEXT,
   avatar_url TEXT,
@@ -105,7 +105,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_posts_updated_at
   BEFORE UPDATE ON public.posts
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public.private_notes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT,
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -144,8 +144,8 @@ CREATE TABLE IF NOT EXISTS public.collaborations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
-  owner_id UUID NOT NULL, -- Supabase auth user ID of the owner
-  collaborators UUID[] DEFAULT '{}'::uuid[], -- Array of collaborator user IDs
+  owner_id UUID NOT NULL, -- Supabase auth UID of the owner
+  collaborators UUID[] DEFAULT '{}'::uuid[], -- Array of collaborator Supabase auth UIDs
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -155,7 +155,7 @@ ALTER TABLE public.collaborations ENABLE ROW LEVEL SECURITY;
 -- Owners and collaborators can read
 CREATE POLICY "Owners and collaborators can read collaborations" ON public.collaborations
   FOR SELECT USING (
-    auth.uid() = owner_id OR 
+    auth.uid() = owner_id OR
     auth.uid() = ANY(collaborators)
   );
 

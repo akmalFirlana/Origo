@@ -17,24 +17,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export async function createSupabaseServerClient() {
   const { getToken } = await auth();
-  let token: string | null = null;
 
-  try {
-    token = await getToken({ template: "supabase" });
-  } catch (error) {
-    const maybeError = error as { status?: number } | undefined;
+  const token = await (async () => {
+    try {
+      return await getToken({ template: "supabase" });
+    } catch (error) {
+      const maybeError = error as { status?: number } | undefined;
 
-    if (maybeError?.status === 404) {
-      console.warn(
-        "Supabase token template not found in Clerk; falling back to default session token.",
-      );
+      if (maybeError?.status === 404) {
+        console.warn(
+          "Supabase token template not found in Clerk; falling back to default session token.",
+        );
 
-      token = await getToken();
-    } else {
+        return await getToken();
+      }
+
       throw error;
     }
-  }
-  const token = await getToken({ template: "supabase" });
+  })();
 
   const globalHeaders: Record<string, string> = {};
   if (token) {

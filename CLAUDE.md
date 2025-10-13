@@ -58,7 +58,7 @@ src/
 
 ### Supabase Integration
 - **Client**: `createSupabaseServerClient()` for server-side with Clerk tokens  
-- **RLS**: Row Level Security uses `auth.uid()` for Supabase auth user IDs
+- **RLS**: Row Level Security uses `auth.uid()` for Clerk-linked Supabase user IDs
 - **Example Migration**: `supabase/migrations/001_example_tables_with_rls.sql`
 
 #### Supabase Client Usage Patterns
@@ -189,7 +189,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### Row Level Security (RLS) Policies
 
-All database tables should use RLS policies that reference Supabase auth user IDs via `auth.uid()`.
+All database tables should use RLS policies that reference Clerk-linked Supabase user IDs via `auth.uid()`.
 
 **Basic User-Owned Data Pattern:**
 ```sql
@@ -234,7 +234,7 @@ CREATE POLICY "Users can read public profiles or own profile" ON profiles
 -- Owner and collaborators can access
 CREATE POLICY "Owners and collaborators can read" ON collaborations
   FOR SELECT USING (
-    auth.uid() = owner_id OR 
+    auth.uid() = owner_id OR
     auth.uid() = ANY(collaborators)
   );
 ```
@@ -258,7 +258,7 @@ export async function createPost(title: string, content: string) {
     .insert({
       title,
       content,
-      user_id: user.id, // Supabase auth user ID
+      user_id: user.id, // Clerk-linked Supabase user ID
     })
     .select()
     .single()
@@ -400,7 +400,7 @@ npm run lint         # Run ESLint
 ## Best Practices
 
 1. **Authentication**: Always check user state with Clerk hooks/utilities
-2. **Database**: Use RLS policies with Supabase auth user IDs for security
+2. **Database**: Use RLS policies with Clerk-linked Supabase user IDs for security
 3. **UI**: Leverage existing shadcn/ui components before creating custom ones
 4. **Styling**: Use TailwindCSS classes and CSS custom properties for theming
 5. **Types**: Maintain strong TypeScript typing throughout

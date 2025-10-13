@@ -1,7 +1,7 @@
 -- Create the users table for profiles (using existing pattern from template)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID UNIQUE NOT NULL, -- Supabase auth user ID
+  user_id UUID UNIQUE NOT NULL, -- Supabase auth UID synced from Clerk
   theme_preference TEXT DEFAULT 'system', -- 'light', 'dark', or 'system'
   notification_preferences JSONB DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Create the tasks table
 CREATE TABLE IF NOT EXISTS public.tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   title TEXT NOT NULL,
   description TEXT,
   priority TEXT CHECK (priority IN ('urgent_important', 'important', 'urgent', 'optional')), -- Eisenhower matrix
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 -- Create the habits table
 CREATE TABLE IF NOT EXISTS public.habits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   name TEXT NOT NULL,
   description TEXT,
   frequency TEXT CHECK (frequency IN ('daily', 'weekly', 'monthly')) DEFAULT 'daily',
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.habits (
 CREATE TABLE IF NOT EXISTS public.habit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   date DATE NOT NULL,
   status TEXT CHECK (status IN ('done', 'skipped', 'missed')) DEFAULT 'missed',
   note TEXT,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS public.habit_logs (
 -- Create the events table for calendar
 CREATE TABLE IF NOT EXISTS public.events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   title TEXT NOT NULL,
   description TEXT,
   location TEXT,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS public.events (
 -- Create the activity logs table for global history
 CREATE TABLE IF NOT EXISTS public.activity_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   entity_type TEXT NOT NULL CHECK (entity_type IN ('task', 'habit', 'event', 'note')), -- Type of entity
   entity_id UUID NOT NULL, -- ID of the related entity
   action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete', 'complete', 'incomplete', 'check', 'uncheck', 'skip')), -- What happened
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS public.activity_logs (
 -- Create tags table for tasks and notes
 CREATE TABLE IF NOT EXISTS public.tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL, -- Supabase auth user ID
+  user_id UUID NOT NULL, -- Supabase auth UID synced from Clerk
   name TEXT NOT NULL,
   color TEXT, -- Color for UI display
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -206,7 +206,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
@@ -241,6 +241,7 @@ DECLARE
   user_id_value UUID;
   entity_id_value UUID;
   metadata_value JSONB;
+  entity_type_value TEXT;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     action_value := 'delete';
@@ -262,10 +263,18 @@ BEGIN
     );
   END IF;
 
+  CASE TG_TABLE_NAME
+    WHEN 'tasks' THEN entity_type_value := 'task';
+    WHEN 'habits' THEN entity_type_value := 'habit';
+    WHEN 'events' THEN entity_type_value := 'event';
+    ELSE
+      RAISE EXCEPTION 'Unsupported table for log_activity: %', TG_TABLE_NAME;
+  END CASE;
+
   INSERT INTO public.activity_logs (user_id, entity_type, entity_id, action, metadata)
   VALUES (
     user_id_value,
-    TG_TABLE_NAME,
+    entity_type_value,
     entity_id_value,
     action_value,
     metadata_value

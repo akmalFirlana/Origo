@@ -66,7 +66,7 @@ We welcome contributions to the CodeGuide Starter Kit! This document provides gu
 
 ### Database
 - All new tables must implement Row Level Security (RLS)
-- Use Supabase auth user IDs (`auth.uid()`) in RLS policies
+- Use Supabase auth UIDs via `auth.uid()` in RLS policies
 - Follow the established patterns in `supabase/migrations/`
 
 ### Code Organization
