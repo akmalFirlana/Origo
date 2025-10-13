@@ -201,12 +201,12 @@ CREATE INDEX IF NOT EXISTS idx_tags_user_id ON public.tags(user_id);
 
 -- Create updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$ language 'plpgsql';
+$$ language 'plpgsql';
 
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles
