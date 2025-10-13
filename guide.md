@@ -65,7 +65,7 @@ Origo
 ### Tech Stack (Recommended Defaults):
 • **Frontend:** Vite, TypeScript, React, shadcn/ui components, Tailwind CSS
 • **Backend & Storage:** Supabase (Postgres + Row Level Security)
-• **Auth:** Clerk Auth
+• **Auth:** Supabase
 • **PWA:** Installable, service worker for basic caching (no functional offline mode in v1), Web Push for task & event reminders
 • **State Management:** TanStack Query + Zustand (for UI/local state)
 • **Charts:** Simple Recharts for habits & the dashboard
