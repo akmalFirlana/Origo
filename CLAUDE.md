@@ -58,7 +58,7 @@ src/
 
 ### Supabase Integration
 - **Client**: `createSupabaseServerClient()` for server-side with Clerk tokens  
-- **RLS**: Row Level Security uses `auth.jwt() ->> 'sub'` for Clerk user IDs
+- **RLS**: Row Level Security uses `(auth.jwt() ->> 'sub')` for Clerk user IDs
 - **Example Migration**: `supabase/migrations/001_example_tables_with_rls.sql`
 
 #### Supabase Client Usage Patterns
@@ -189,7 +189,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### Row Level Security (RLS) Policies
 
-All database tables should use RLS policies that reference Clerk user IDs via `auth.jwt() ->> 'sub'`.
+All database tables should use RLS policies that reference Clerk user IDs via `(auth.jwt() ->> 'sub')`.
 
 **Basic User-Owned Data Pattern:**
 ```sql
@@ -202,22 +202,22 @@ CREATE POLICY "Anyone can read posts" ON posts
 
 -- Users can only insert posts as themselves
 CREATE POLICY "Users can insert own posts" ON posts
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 -- Users can only update their own posts
 CREATE POLICY "Users can update own posts" ON posts
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 -- Users can only delete their own posts
 CREATE POLICY "Users can delete own posts" ON posts
-  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 ```
 
 **Private Data Pattern:**
 ```sql
 -- Completely private to each user
 CREATE POLICY "Users can only access own data" ON private_notes
-  FOR ALL USING (auth.jwt() ->> 'sub' = user_id);
+  FOR ALL USING ((auth.jwt() ->> 'sub') = user_id);
 ```
 
 **Conditional Visibility Pattern:**
@@ -225,7 +225,7 @@ CREATE POLICY "Users can only access own data" ON private_notes
 -- Public profiles or own profile
 CREATE POLICY "Users can read public profiles or own profile" ON profiles
   FOR SELECT USING (
-    is_public = true OR auth.jwt() ->> 'sub' = user_id
+    is_public = true OR (auth.jwt() ->> 'sub') = user_id
   );
 ```
 
@@ -234,8 +234,8 @@ CREATE POLICY "Users can read public profiles or own profile" ON profiles
 -- Owner and collaborators can access
 CREATE POLICY "Owners and collaborators can read" ON collaborations
   FOR SELECT USING (
-    auth.jwt() ->> 'sub' = owner_id OR 
-    auth.jwt() ->> 'sub' = ANY(collaborators)
+    (auth.jwt() ->> 'sub') = owner_id OR
+    (auth.jwt() ->> 'sub') = ANY(collaborators)
   );
 ```
 

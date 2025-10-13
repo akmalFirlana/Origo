@@ -98,7 +98,7 @@ export async function ProfilePage() {
 
 ## Row Level Security (RLS)
 
-Create RLS policies in your Supabase tables that use Clerk user IDs. Example:
+Create RLS policies in your Supabase tables that compare against the Clerk user ID embedded in the JWT. Example:
 
 ```sql
 -- Enable RLS on your table
@@ -106,11 +106,11 @@ ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to read their own data
 CREATE POLICY "Users can read own data" ON your_table
-  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 -- Allow users to insert their own data
 CREATE POLICY "Users can insert own data" ON your_table
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 ```
 
 ## Troubleshooting
@@ -123,3 +123,4 @@ CREATE POLICY "Users can insert own data" ON your_table
 ### Token issues
 - Make sure you're using `createSupabaseServerClient()` for server-side operations
 - For client-side, ensure you're passing the Clerk token to Supabase
+- **404 when requesting `getToken({ template: "supabase" })`:** the Supabase token template is missing in Clerk. Re-run the "Connect with Supabase" flow in the Clerk dashboard or manually recreate the template so Clerk can mint tokens with the expected claims.

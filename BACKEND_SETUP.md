@@ -10,14 +10,14 @@ The Origo app uses the following database schema:
 
 1. **profiles** - User profiles and preferences
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID (unique)
+   - `user_id` - Clerk user ID from the JWT `sub` claim (unique)
    - `theme_preference` - 'light', 'dark', or 'system'
    - `notification_preferences` - JSONB for notification settings
    - `created_at`, `updated_at` - Timestamps
 
 2. **tasks** - Task management with Eisenhower matrix
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `title`, `description` - Task details
    - `priority` - 'urgent_important', 'important', 'urgent', 'optional'
    - `due_date` - When task is due
@@ -27,7 +27,7 @@ The Origo app uses the following database schema:
 
 3. **habits** - Habit tracking
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `name`, `description` - Habit details
    - `frequency` - 'daily', 'weekly', 'monthly'
    - `schedule` - JSONB for schedule patterns
@@ -37,7 +37,7 @@ The Origo app uses the following database schema:
 4. **habit_logs** - Daily habit completion tracking
    - `id` - UUID primary key
    - `habit_id` - Reference to habit
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `date` - Date of log
    - `status` - 'done', 'skipped', 'missed'
    - `note` - Optional note
@@ -45,7 +45,7 @@ The Origo app uses the following database schema:
 
 5. **events** - Calendar events
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `title`, `description`, `location` - Event details
    - `start_at`, `end_at` - Event time range
    - `reminders` - Array of minutes before event
@@ -53,7 +53,7 @@ The Origo app uses the following database schema:
 
 6. **activity_logs** - Global activity timeline
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `entity_type` - 'task', 'habit', 'event', 'note'
    - `entity_id` - ID of related entity
    - `action` - 'create', 'update', 'delete', etc.
@@ -62,7 +62,7 @@ The Origo app uses the following database schema:
 
 7. **tags** - Task and note tags
    - `id` - UUID primary key
-   - `user_id` - Clerk user ID
+   - `user_id` - Clerk user ID from the JWT `sub` claim
    - `name` - Tag name
    - `color` - Color for UI
    - `created_at` - Timestamp
@@ -72,7 +72,7 @@ The Origo app uses the following database schema:
 All tables use Row Level Security (RLS) policies to ensure users can only access their own data. The policies are set up as follows:
 
 - Users can only access, create, update, and delete their own records
-- The Clerk user ID (`auth.jwt() ->> 'sub'`) is used to enforce user isolation
+- RLS policies rely on the Clerk user ID extracted via `(auth.jwt() ->> 'sub')`
 
 ## Triggers
 

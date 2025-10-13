@@ -11,88 +11,88 @@ ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for RLS
 CREATE POLICY "Users can view their own tasks" ON public.tasks
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own tasks" ON public.tasks
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own tasks" ON public.tasks
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own tasks" ON public.tasks
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own habits" ON public.habits
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own habits" ON public.habits
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own habits" ON public.habits
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own habits" ON public.habits
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own habit_logs" ON public.habit_logs
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own habit_logs" ON public.habit_logs
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own habit_logs" ON public.habit_logs
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own habit_logs" ON public.habit_logs
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own events" ON public.events
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own events" ON public.events
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own events" ON public.events
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own events" ON public.events
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own activity_logs" ON public.activity_logs
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own activity_logs" ON public.activity_logs
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own activity_logs" ON public.activity_logs
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own activity_logs" ON public.activity_logs
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own profiles" ON public.profiles
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own profiles" ON public.profiles
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own profiles" ON public.profiles
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own profiles" ON public.profiles
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can view their own tags" ON public.tags
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can insert their own tags" ON public.tags
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can update their own tags" ON public.tags
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING ((auth.jwt() ->> 'sub') = user_id);
 
 CREATE POLICY "Users can delete their own tags" ON public.tags
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING ((auth.jwt() ->> 'sub') = user_id);
 
 -- Create tables in the correct order respecting foreign key dependencies
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -201,12 +201,12 @@ CREATE INDEX IF NOT EXISTS idx_tags_user_id ON public.tags (user_id);
 
 -- Update updated_at column automatically
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER handle_profiles_updated_at 
   BEFORE UPDATE ON public.profiles 
@@ -226,13 +226,13 @@ CREATE TRIGGER handle_events_updated_at
 
 -- Function to create profile automatically when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (user_id)
   VALUES (NEW.id::text);
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

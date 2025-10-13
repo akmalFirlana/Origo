@@ -66,7 +66,7 @@ We welcome contributions to the CodeGuide Starter Kit! This document provides gu
 
 ### Database
 - All new tables must implement Row Level Security (RLS)
-- Use Clerk user IDs (`auth.jwt() ->> 'sub'`) in RLS policies
+- Use Clerk user IDs from `(auth.jwt() ->> 'sub')` in RLS policies
 - Follow the established patterns in `supabase/migrations/`
 
 ### Code Organization
@@ -154,7 +154,7 @@ CREATE TABLE example_table (
 ALTER TABLE example_table ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage own records" ON example_table
-  FOR ALL USING (auth.jwt() ->> 'sub' = user_id);
+  FOR ALL USING ((auth.jwt() ->> 'sub') = user_id);
 ```
 
 ## Community Guidelines
